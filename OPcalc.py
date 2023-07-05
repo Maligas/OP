@@ -6,6 +6,15 @@ import socket
 import struct
 
 
+def checksumm(icmp_packet):
+    if len(icmp_packet) % 2:
+        icmp_packet += b'\x00'
+    s = sum(struct.unpack('!H', icmp_packet[i:i + 2])[0] for i in range(0, len(icmp_packet), 2))
+    s = (s & 0xffff) + (s >> 16)
+    s = ~s & 0xffff
+    return s
+
+
 def create_icmp_packet(data):
     # ICMP тип и код
     icmp_type = 8  # Echo Request
@@ -22,11 +31,7 @@ def create_icmp_packet(data):
     icmp_packet = struct.pack('!BBHHH', icmp_type, icmp_code, 0, icmp_id, icmp_seq) + icmp_data
 
     # Вычисляем контрольную сумму
-    checksum = 0
-    for i in range(0, len(icmp_packet) - 1, 2):
-        packet_segment = (icmp_packet[i] << 8) + icmp_packet[i + 1]
-        checksum += packet_segment
-    checksum = (checksum >> 16) + (checksum & 0xFFFF)
+    checksum = checksumm(icmp_packet)
 
     # Устанавливаем контрольную сумму в пакет
     icmp_packet = struct.pack('!BBHHH', icmp_type, icmp_code, checksum, icmp_id, icmp_seq) + icmp_data
